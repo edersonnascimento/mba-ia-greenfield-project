@@ -1,11 +1,8 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import type { ConfigType } from '@nestjs/config';
 import { Job } from 'bullmq';
 import { Repository } from 'typeorm';
-import { Inject } from '@nestjs/common';
-import storageConfig from '../config/storage.config';
 import { VIDEO_PROCESSING_QUEUE } from '../queue/queue.constants';
 import { VideoProcessingJobData } from '../queue/videos.queue';
 import { StorageService } from '../storage/storage.service';
@@ -20,8 +17,6 @@ export class VideoProcessingProcessor extends WorkerHost {
     private readonly videoRepository: Repository<Video>,
     private readonly storageService: StorageService,
     private readonly ffmpeg: FfmpegService,
-    @Inject(storageConfig.KEY)
-    private readonly _storageCfg: ConfigType<typeof storageConfig>,
   ) {
     super();
   }

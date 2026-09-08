@@ -130,6 +130,65 @@ export class StorageService implements OnApplicationBootstrap {
     );
   }
 
+  async presignPut(key: string): Promise<string> {
+    return getSignedUrl(
+      this.getClient(),
+      new PutObjectCommand({ Bucket: this.cfg.bucket, Key: key }),
+      { expiresIn: this.cfg.presignedUrlTtlSeconds },
+    );
+  }
+
+  async presignCreateMultipart(key: string): Promise<string> {
+    return getSignedUrl(
+      this.getClient(),
+      new CreateMultipartUploadCommand({
+        Bucket: this.cfg.bucket,
+        Key: key,
+      }),
+      { expiresIn: this.cfg.presignedUrlTtlSeconds },
+    );
+  }
+
+  async presignCompleteMultipart(
+    key: string,
+    uploadId: string,
+    parts: MultipartPart[],
+  ): Promise<string> {
+    const completed: CompletedPart[] = parts.map((p) => ({
+      ETag: p.etag,
+      PartNumber: p.partNumber,
+    }));
+    return getSignedUrl(
+      this.getClient(),
+      new CompleteMultipartUploadCommand({
+        Bucket: this.cfg.bucket,
+        Key: key,
+        UploadId: uploadId,
+        MultipartUpload: { Parts: completed },
+      }),
+      { expiresIn: this.cfg.presignedUrlTtlSeconds },
+    );
+  }
+
+  async presignAbortMultipart(key: string, uploadId: string): Promise<string> {
+    return getSignedUrl(
+      this.getClient(),
+      new AbortMultipartUploadCommand({
+        Bucket: this.cfg.bucket,
+        Key: key,
+        UploadId: uploadId,
+      }),
+      { expiresIn: this.cfg.presignedUrlTtlSeconds },
+    );
+  }
+
+  async readStream(key: string): Promise<NodeJS.ReadableStream> {
+    const response = await this.getClient().send(
+      new GetObjectCommand({ Bucket: this.cfg.bucket, Key: key }),
+    );
+    return response.Body as NodeJS.ReadableStream;
+  }
+
   async presignGet(
     key: string,
     options: { disposition?: string } = {},

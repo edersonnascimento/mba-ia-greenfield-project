@@ -6,7 +6,7 @@ import { Channel } from '../channels/entities/channel.entity';
 import storageConfig from '../config/storage.config';
 import { VideosQueue } from '../queue/videos.queue';
 import { MultipartPart, StorageService } from '../storage/storage.service';
-import { CreateVideoDto } from './dto/video.dto';
+import { CreateVideoDto, VideoResponseDto } from './dto/video.dto';
 import { Video, VideoStatus } from './entities/video.entity';
 import {
   VideoForbiddenException,
@@ -21,13 +21,6 @@ import { generateUniqueId } from './unique-id.util';
 export interface PlaybackUrl {
   url: string;
   expires_at: Date;
-}
-
-export interface ProcessingMetadata {
-  durationSeconds: number;
-  width?: number;
-  height?: number;
-  codec?: string;
 }
 
 @Injectable()
@@ -159,10 +152,39 @@ export class VideosService {
     await this.storageService.abortMultipart(video.storage_key, uploadId);
   }
 
-  async getVideo(userId: string, videoId: string): Promise<Video> {
+  async getVideo(userId: string, videoId: string): Promise<VideoResponseDto> {
     const channelId = await this.channelIdOf(userId);
-    return this.ownedVideoOrThrow(videoId, channelId);
+    const video = await this.ownedVideoOrThrow(videoId, channelId);
+    return this.toResponseDto(video);
   }
+
+  private async thumbnailUrl(video: Video): Promise<string | null> {
+    if (!video.thumbnail_key) return null;
+    return this.storageService.presignGet(video.thumbnail_key);
+  }
+
+  private async videoUrl(video: Video): Promise<string | null> {
+    if (video.status !== VideoStatus.READY || !video.storage_key) return null;
+    return this.storageService.presignGet(video.storage_key);
+  }
+
+  private async toResponseDto(video: Video): Promise<VideoResponseDto> {
+    return {
+      id: video.id,
+      unique_id: video.unique_id,
+      title: video.title,
+      status: video.status,
+      size_bytes: video.size_bytes,
+      duration_seconds: video.duration_seconds,
+      width: video.width,
+      height: video.height,
+      codec: video.codec,
+      thumbnail_url: await this.thumbnailUrl(video),
+      video_url: await this.videoUrl(video),
+      created_at: video.created_at,
+    };
+  }
+}
 
   async getPlayUrl(videoId: string): Promise<PlaybackUrl> {
     const video = await this.videoRepository.findOne({
@@ -196,37 +218,5 @@ export class VideosService {
       disposition: `attachment; filename="${filename}"`,
     });
     return { url, filename };
-  }
-
-  async applyProcessing(
-    videoId: string,
-    metadata: ProcessingMetadata,
-    thumbnailKey: string,
-  ): Promise<void> {
-    const video = await this.videoRepository.findOne({
-      where: { id: videoId },
-    });
-    if (!video) return;
-    video.status = VideoStatus.READY;
-    video.duration_seconds = metadata.durationSeconds;
-    video.width = metadata.width ?? null;
-    video.height = metadata.height ?? null;
-    video.codec = metadata.codec ?? null;
-    video.thumbnail_key = thumbnailKey;
-    video.processing_error = null;
-    await this.videoRepository.save(video);
-  }
-
-  async markProcessedFailed(
-    videoId: string,
-    errorMessage: string,
-  ): Promise<void> {
-    const video = await this.videoRepository.findOne({
-      where: { id: videoId },
-    });
-    if (!video) return;
-    video.status = VideoStatus.FAILED;
-    video.processing_error = errorMessage;
-    await this.videoRepository.save(video);
   }
 }

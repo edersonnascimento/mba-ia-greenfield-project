@@ -35,7 +35,6 @@ describe('VideoProcessingProcessor (integration, FFmpeg + MinIO + DB)', () => {
       videoRepo,
       storage,
       new FfmpegService(),
-      storageConfig(),
     );
   });
 

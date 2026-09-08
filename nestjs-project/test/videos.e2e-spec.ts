@@ -14,7 +14,8 @@ import { AppModule } from '../src/app.module';
 import { AuthService } from '../src/auth/auth.service';
 import { DomainExceptionFilter } from '../src/common/filters/domain-exception.filter';
 import { ValidationExceptionFilter } from '../src/common/filters/validation-exception.filter';
-import { Video, VideoStatus } from '../src/videos/entities/video.entity';
+import { VideoStatus } from '../src/videos/entities/video.entity';
+import { VideoResponseDto } from '../src/videos/dto/video.dto';
 import { cleanAllTables } from '../src/test/create-test-data-source';
 
 const execFile = promisify(execFileCb);
@@ -168,14 +169,14 @@ describe('Videos (e2e)', () => {
     return id;
   }
 
-  async function awaitReady(token: string, id: string): Promise<Video> {
+  async function awaitReady(token: string, id: string): Promise<VideoResponseDto> {
     const deadline = Date.now() + 40_000;
     while (Date.now() < deadline) {
       const res = await request(app.getHttpServer())
         .get(`/videos/${id}`)
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
-      const body = res.body as Video;
+      const body = res.body as VideoResponseDto;
       if (body.status === VideoStatus.READY) return body;
       await new Promise((r) => setTimeout(r, 1000));
     }
@@ -218,7 +219,7 @@ describe('Videos (e2e)', () => {
     expect(video.status).toBe(VideoStatus.READY);
     expect(video.duration_seconds).toBeGreaterThan(0);
     expect(video.width).toBeGreaterThan(0);
-    expect(video.thumbnail_key).toMatch(/\.jpg$/);
+    expect(video.thumbnail_url).toContain('thumbnail.jpg');
     expect(Number(video.size_bytes)).toBeGreaterThan(PART1);
 
     // Streaming (anonymous) with Range
