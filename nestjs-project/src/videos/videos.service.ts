@@ -184,7 +184,6 @@ export class VideosService {
       created_at: video.created_at,
     };
   }
-}
 
   async getPlayUrl(videoId: string): Promise<PlaybackUrl> {
     const video = await this.videoRepository.findOne({

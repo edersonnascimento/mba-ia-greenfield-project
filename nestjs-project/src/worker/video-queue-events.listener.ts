@@ -20,10 +20,6 @@ export class VideoQueueEventsListener extends QueueEventsHost {
     super();
   }
 
-  private videoIdFrom(job: { jobId: string }): string {
-    return job.jobId;
-  }
-
   @OnQueueEvent('completed')
   async onCompleted(job: { jobId: string }): Promise<void> {
     const videoId = await this.jobVideoId(job);
@@ -40,8 +36,10 @@ export class VideoQueueEventsListener extends QueueEventsHost {
     );
   }
 
-  private async jobVideoId(job: { jobId: string }): Promise<string | undefined> {
-    let resolved: Job | null;
+  private async jobVideoId(job: {
+    jobId: string;
+  }): Promise<string | undefined> {
+    let resolved: Job | undefined;
     try {
       resolved = await this.queue.getJob(job.jobId);
     } catch {

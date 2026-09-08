@@ -62,7 +62,9 @@ describe('StorageService (unit)', () => {
     await service.presignPut('videos/abc/cover.png');
     const command = mockedGetSignedUrl.mock.calls[0][1];
     expect(command).toBeInstanceOf(PutObjectCommand);
-    expect((command as PutObjectCommand).input.Key).toBe('videos/abc/cover.png');
+    expect((command as PutObjectCommand).input.Key).toBe(
+      'videos/abc/cover.png',
+    );
   });
 
   it('presignCreateMultipart issues a CreateMultipartUploadCommand', async () => {
@@ -84,10 +86,14 @@ describe('StorageService (unit)', () => {
   });
 
   it('presignCompleteMultipart issues a CompleteMultipartUploadCommand with parts', async () => {
-    await service.presignCompleteMultipart('videos/abc/source.mp4', 'upload-1', [
-      { partNumber: 1, etag: '"etag-1"' },
-      { partNumber: 2, etag: '"etag-2"' },
-    ]);
+    await service.presignCompleteMultipart(
+      'videos/abc/source.mp4',
+      'upload-1',
+      [
+        { partNumber: 1, etag: '"etag-1"' },
+        { partNumber: 2, etag: '"etag-2"' },
+      ],
+    );
     const command = mockedGetSignedUrl.mock
       .calls[0][1] as CompleteMultipartUploadCommand;
     expect(command).toBeInstanceOf(CompleteMultipartUploadCommand);

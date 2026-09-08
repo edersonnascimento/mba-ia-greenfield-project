@@ -18,7 +18,7 @@ function makeRepo(video: Video | null) {
 function makeStorage() {
   return {
     presignGet: jest.fn().mockResolvedValue('https://presigned/source.mp4'),
-    putObject: jest.fn().mockResolvedValue(undefined) as jest.Mock,
+    putObject: jest.fn().mockResolvedValue(undefined),
   };
 }
 

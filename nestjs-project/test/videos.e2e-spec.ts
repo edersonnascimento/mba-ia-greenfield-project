@@ -169,7 +169,10 @@ describe('Videos (e2e)', () => {
     return id;
   }
 
-  async function awaitReady(token: string, id: string): Promise<VideoResponseDto> {
+  async function awaitReady(
+    token: string,
+    id: string,
+  ): Promise<VideoResponseDto> {
     const deadline = Date.now() + 40_000;
     while (Date.now() < deadline) {
       const res = await request(app.getHttpServer())

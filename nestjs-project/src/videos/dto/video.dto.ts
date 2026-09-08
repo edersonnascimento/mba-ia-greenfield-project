@@ -84,7 +84,7 @@ export class VideoDraftResponseDto {
   title: string;
 
   @ApiProperty({ enum: VideoStatus })
-  status: string;
+  status: VideoStatus;
 
   @ApiProperty({ example: 'videos/Ab3xYz9Qw2Lm/source.mp4' })
   storage_key: string;
@@ -101,7 +101,7 @@ export class VideoResponseDto {
   title: string;
 
   @ApiProperty({ enum: VideoStatus })
-  status: string;
+  status: VideoStatus;
 
   @ApiProperty({ required: false, nullable: true, example: '52428800' })
   size_bytes: string | number | null;

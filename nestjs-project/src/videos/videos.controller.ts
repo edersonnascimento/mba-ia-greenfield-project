@@ -334,9 +334,7 @@ export class VideosController {
     description: 'Video is not ready',
     schema: { $ref: getSchemaPath(ApiErrorEnvelope) },
   })
-  async playUrl(
-    @Param('id') id: string,
-  ): Promise<PlayUrlResponseDto> {
+  async playUrl(@Param('id') id: string): Promise<PlayUrlResponseDto> {
     return this.videosService.getPlayUrl(id);
   }
 

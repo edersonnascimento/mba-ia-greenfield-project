@@ -2,6 +2,8 @@ import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigType } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { Channel } from '../channels/entities/channel.entity';
+import { User } from '../users/entities/user.entity';
 import databaseConfig from '../config/database.config';
 import queueConfig from '../config/queue.config';
 import storageConfig from '../config/storage.config';
@@ -43,7 +45,9 @@ import { VideoQueueEventsListener } from './video-queue-events.listener';
       }),
     }),
     BullModule.registerQueue({ name: VIDEO_PROCESSING_QUEUE }),
-    TypeOrmModule.forFeature([Video]),
+    // Channel/User are required for TypeORM relation metadata (Video#channel),
+    // even though the worker only queries Video.
+    TypeOrmModule.forFeature([Video, Channel, User]),
   ],
   providers: [
     VideoProcessingProcessor,
