@@ -33,7 +33,30 @@ docker compose exec nestjs-api npm run start:dev
 
 Services:
 - `nestjs-api` — NestJS API, port `3000`
+- `video-worker` — NestJS BullMQ worker (ffprobe/ffmpeg), `npm run start:worker`, port `3001`
 - `db` — PostgreSQL 17, port `5432`, database `streamtube`, user/password `streamtube`
+- `minio` — Object storage (S3-compatible), API port `9000`, console `9001`, bucket `streamtube`, keys `minioadmin`/`minioadmin`
+- `redis` — BullMQ queue, port `6379`
+- `mailpit` — SMTP, port `1025` (web UI `8025`)
+
+## Videos / Upload (Fase 03)
+
+The `videos` module exposes a presigned multipart upload flow (10 GB capable): the API never proxies file bytes.
+
+| Endpoint | Auth | Purpose |
+|----------|------|---------|
+| `POST /videos` | JWT (owner) | Pre-register a `draft`; returns `storage_key` |
+| `POST /videos/:id/uploads` | JWT (owner) | Create S3 multipart session → `upload_id`, `part_size` |
+| `POST /videos/:id/uploads/parts` | JWT (owner) | Presigned `UploadPart` URL (client streams part to MinIO direct) |
+| `POST /videos/:id/uploads/complete` | JWT (owner) | Assemble multipart, HEAD verify, → `processing`, enqueue job |
+| `POST /videos/:id/uploads/abort` | JWT (owner) | Abort the multipart session |
+| `GET /videos/:id` | JWT (owner) | Video detail + metadata |
+| `GET /videos/:id/play-url` | Public | Presigned streaming URL (Range/206) |
+| `GET /videos/:id/download-url` | JWT (any) | Presigned download URL (Content-Disposition) |
+
+**Worker:** `docker compose exec video-worker npm run start:worker` (or `docker compose up video-worker`) consumes the `video-processing` BullMQ queue — ffprobe metadata, ffmpeg thumbnail to `videos/{unique_id}/thumbnail.jpg`, status → `ready`/`failed`.
+
+**Storage env (`.env` / compose):** `S3_ENDPOINT` (`http://minio:9000`), `S3_ACCESS_KEY`/`S3_SECRET_KEY` (`minioadmin`), `S3_BUCKET` (`streamtube`), `S3_PRESIGNED_URL_TTL_SECONDS`, `S3_PART_SIZE`; queue `REDIS_HOST` (`redis`), `QUEUE_VIDEO_PROCESSING`, `QUEUE_ATTEMPTS`.
 
 All verification and teardown commands run on the **host machine**:
 
@@ -60,6 +83,7 @@ docker compose down
 
 ```bash
 npm run start:dev                        # Dev server with hot-reload
+npm run start:worker                     # Video worker (ffprobe/ffmpeg queue consumer)
 npm run build                            # Compile to dist/
 npm run start:prod                       # Run compiled build
 

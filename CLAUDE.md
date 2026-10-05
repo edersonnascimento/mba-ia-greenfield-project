@@ -14,6 +14,18 @@ This is a monorepo with two main areas:
 - `docs/` — Project documentation, architecture diagrams, and planning.
 - `next-frontend/` (Next.js) — not yet initialized
 
+## Videos Domain (Fase 03)
+
+The backend's `videos` module delivers upload, processing, streaming and download:
+
+- **Upload (up to 10 GB)**: `POST /videos` pre-registers a `draft`; `POST /videos/:id/uploads` creates an S3 multipart session; `POST /videos/:id/uploads/parts` returns **presigned** `UploadPart` URLs so the client streams bytes **directly to object storage** (MinIO/S3) — the API never touches file data.
+- **Completion**: `POST /videos/:id/uploads/complete` assembles the multipart upload server-side, verifies the object (HEAD), moves the `Video` to `processing`, and enqueues a `video-processing` BullMQ job.
+- **Processing worker**: a dedicated `video-worker` service (same NestJS repo, `npm run start:worker`) consumes the queue via `@Processor` (`video-processing.processor.ts`), extracts metadata with `ffprobe`, generates a thumbnail with `ffmpeg`, uploads it, and flips the row to `ready` (or `failed` after retries).
+- **Streaming / download**: presigned `GetObject` URLs with HTTP `Range`/`206` (streaming, anonymous) and `Content-Disposition: attachment` (download).
+- **Status lifecycle**: `draft → processing → ready | failed` (DB enum `video_status_enum`).
+
+Key objects live in `src/videos/` (entity, service, controller, DTOs, exceptions, `unique-id`/`filename` utils), `src/storage/` (S3/MinIO client + presign), `src/queue/` (BullMQ producer), and `src/worker/` (FFmpeg processor + entrypoint). See [`docs/phases/phase-03-videos/phase-03-videos.md`](docs/phases/phase-03-videos/phase-03-videos.md) for the plan.
+
 ## Architecture (C4 Container Diagram)
 
 See `docs/diagrams/software-arch.mermaid` for the full diagram. Key containers:
@@ -23,7 +35,7 @@ See `docs/diagrams/software-arch.mermaid` for the full diagram. Key containers:
 - **Video Worker** (FFmpeg) → consumes jobs from queue, processes videos, updates DB and storage
 - **Database** (PostgreSQL) → users, channels, videos, comments, likes
 - **Object Storage** (S3/MinIO) → video files and thumbnails
-- **Message Queue** (TBD) → video processing job queue
+- **Message Queue** (BullMQ/Redis) → video processing job queue
 - **Email Service** (SMTP) → account confirmation and password recovery
 
 ## Docker Networking
